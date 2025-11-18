@@ -1,0 +1,141 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  user
+  trainer
+}
+
+model User {
+  id          Int         @id @default(autoincrement())
+  telegram_id String?     @unique
+  username    String?
+  first_name  String?
+  last_name   String?
+  photo_url   String?
+  goal_weight Float?
+  goal_date   DateTime?
+  daily_calorie_target Int?
+  daily_protein_target Float?
+  daily_carb_target    Float?
+  daily_fat_target     Float?
+  role        Role        @default(user)
+  trainer_id  Int?
+  created_at  DateTime    @default(now())
+
+  clients     Client[]    @relation("trainerClients")
+  workouts    Workout[]   @relation("trainerWorkouts")
+  nutrition   Nutrition[]
+  tracking    Tracking[]
+  attendance  Attendance[]
+  workoutPlan WorkoutPlan[]
+  trainer     User?       @relation("UserTrainer", fields: [trainer_id], references: [id])
+  trainees    User[]      @relation("UserTrainer")
+
+  @@map("users")
+  @@index([trainer_id], map: "idx_users_trainer_id")
+}
+
+model Client {
+  id          Int       @id @default(autoincrement())
+  name        String?
+  telegram_id String?
+  trainer_id  Int?
+  lastActive  String?
+  created_at  DateTime  @default(now())
+
+  trainer     User?     @relation("trainerClients", fields: [trainer_id], references: [id])
+  workouts    Workout[]
+
+  @@index([trainer_id], map: "idx_clients_trainer_id")
+  @@map("clients")
+}
+
+model Workout {
+  id          Int        @id @default(autoincrement())
+  trainer_id  Int?
+  client_id   Int?
+  title       String?
+  date        String?
+  exercises   String?
+  created_at  DateTime   @default(now())
+
+  trainer     User?      @relation("trainerWorkouts", fields: [trainer_id], references: [id])
+  client      Client?    @relation(fields: [client_id], references: [id])
+  attendance  Attendance[]
+
+  @@index([trainer_id], map: "idx_workouts_trainer_id")
+  @@index([client_id], map: "idx_workouts_client_id")
+  @@map("workouts")
+}
+
+model Nutrition {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  date       String
+  calories   Int      @default(0)
+  protein    Float    @default(0)
+  fat        Float    @default(0)
+  carbs      Float    @default(0)
+  note       String?
+  created_at DateTime @default(now())
+
+  user       User     @relation(fields: [user_id], references: [id])
+
+  @@index([user_id, date], map: "idx_nutrition_user_date")
+  @@map("nutrition")
+}
+
+model Tracking {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  date       String
+  weight     Float?
+  body_fat   Float?
+  created_at DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id])
+
+  @@index([user_id, date], map: "idx_tracking_user_date")
+  @@map("tracking")
+}
+
+model Attendance {
+  id         Int      @id @default(autoincrement())
+  user_id    Int?
+  workout_id Int?
+  time       String?
+  created_at DateTime @default(now())
+
+  user    User?    @relation(fields: [user_id], references: [id])
+  workout Workout? @relation(fields: [workout_id], references: [id])
+
+  @@index([user_id], map: "idx_attendance_user")
+  @@map("attendance")
+}
+
+model WorkoutPlan {
+  id          Int      @id @default(autoincrement())
+  user_id     Int
+  day_of_week Int
+  title       String
+  created_at  DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id])
+
+  @@unique([user_id, day_of_week], map: "ux_workout_plan_user_day")
+  @@map("workout_plan")
+}

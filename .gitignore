@@ -1,0 +1,23 @@
+node_modules
+
+# Keep environment variables out of version control
+.env
+.env.*
+backend/.env
+frontend/.env
+backend/env.*
+
+# Build artifacts
+frontend/dist
+backend/dist
+
+# Prisma generated files (if generated outside node_modules)
+/generated/prisma
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS junk
+.DS_Store
+Thumbs.db
