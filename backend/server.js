@@ -456,7 +456,7 @@ app.use('/api/{*splat}', (req, res) => {
 })
 
 // ---- Redirect all non-API routes to frontend on Render
-app.get('*', (req, res) => {
+app.get('{*splat}', (req, res) => {
   const frontendUrl = process.env.FRONTEND_URL
   if (!frontendUrl) {
     return res.status(500).json({ error: 'FRONTEND_URL not configured' })
