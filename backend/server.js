@@ -51,7 +51,15 @@ app.use(express.urlencoded({extended: true}))
 
 function trainerOnly(req, res, next) {
   if (req.userRole !== 'trainer') {
-    return res.status(403).json({ error: 'trainer_only' })
+    // Enhanced error logging for debugging 403 issues
+    console.error('[TRAINER_ONLY] Access denied:', {
+      userId: req.userId,
+      userRole: req.userRole,
+      expectedRole: 'trainer',
+      path: req.path,
+      method: req.method
+    })
+    return res.status(403).json({ error: 'trainer_only', receivedRole: req.userRole })
   }
   next()
 }
