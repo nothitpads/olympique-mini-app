@@ -450,19 +450,17 @@ app.post('/webhook', (req, res) => {
   res.sendStatus(200)
 })
 
-// ---- Root route
-app.get('/', (req, res) => {
-  res.json({ message: 'Olympique Bot API', status: 'ok' })
-})
-
 // ---- API fallback 404 for unknown API routes
 app.use('/api/{*splat}', (req, res) => {
   res.status(404).json({ error: 'API not found' })
 })
 
-// ---- Redirect non-API routes to frontend on Render
-app.get('{*splat}', (req, res) => {
+// ---- Redirect all non-API routes to frontend on Render
+app.get('*', (req, res) => {
   const frontendUrl = process.env.FRONTEND_URL
+  if (!frontendUrl) {
+    return res.status(500).json({ error: 'FRONTEND_URL not configured' })
+  }
   return res.redirect(frontendUrl + req.originalUrl)
 })
 
