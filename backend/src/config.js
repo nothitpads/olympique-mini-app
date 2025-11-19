@@ -1,12 +1,15 @@
-const DEFAULT_BOT_TOKEN = '8377316351:AAGzEraoeeKUqjYZFT3rf_ASvYgLamG0jY0'
-const DEFAULT_JWT_SECRET = '76590a9a90d54144aeb6b83af8bc5b46'
-const DEFAULT_FATSECRET_CLIENT_ID = '0bbf3e86861543acb35d67c5158802c6'
-const DEFAULT_FATSECRET_CLIENT_SECRET = '39023daac05d4a35a22fdbf203342a83'
+const required = (key) => {
+  const value = process.env[key]
+  if (!value) {
+    throw new Error(`Missing required environment variable ${key}`)
+  }
+  return value
+}
 
 module.exports = {
-  BOT_TOKEN: process.env.BOT_TOKEN || DEFAULT_BOT_TOKEN,
-  JWT_SECRET: process.env.JWT_SECRET || DEFAULT_JWT_SECRET,
-  FATSECRET_CLIENT_ID: process.env.FATSECRET_CLIENT_ID || DEFAULT_FATSECRET_CLIENT_ID,
-  FATSECRET_CLIENT_SECRET: process.env.FATSECRET_CLIENT_SECRET || DEFAULT_FATSECRET_CLIENT_SECRET
+  BOT_TOKEN: required('BOT_TOKEN'),
+  JWT_SECRET: required('JWT_SECRET'),
+  FATSECRET_CLIENT_ID: required('FATSECRET_CLIENT_ID'),
+  FATSECRET_CLIENT_SECRET: required('FATSECRET_CLIENT_SECRET')
 }
 
