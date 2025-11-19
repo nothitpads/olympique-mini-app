@@ -456,8 +456,11 @@ app.get('/', (req, res) => {
 })
 
 // ---- API fallback 404 for unknown API routes
-app.use('/api/*', (req, res) => {
-  res.status(404).json({ error: 'API not found' })
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'API not found' })
+  }
+  next()
 })
 
 // ---- Redirect non-API routes to frontend on Render
