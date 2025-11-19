@@ -1,13 +1,10 @@
 const express = require('express')
 const cors = require('cors')
-const path = require('path')
 const jwt = require('jsonwebtoken')
 const { validate: validateInitData, parse: parseInitData } = require('@telegram-apps/init-data-node')
 require('dotenv').config()
 const { authMiddleware } = require('./src/middleware/auth')
 const { BOT_TOKEN, JWT_SECRET } = require('./src/config')
-
-// ---- serve frontend static files (built SPA)
 
 const {
   findUserByTelegramId,
@@ -44,9 +41,6 @@ const {
 const app = express()
 
 app.use((req,res,next)=>{ console.log(new Date().toISOString(), req.method, req.path); next(); })
-
-const distPath = path.join(__dirname, '..', 'frontend', 'dist')
-app.use(express.static(distPath))
 
 
 
@@ -456,19 +450,31 @@ app.post('/webhook', (req, res) => {
   res.sendStatus(200)
 })
 
-// ---- API fallback 404 for unknown API routes (use named wildcard)
-app.use('/api/{*splat}', (req, res) => {
+// ---- Root route
+app.get('/', (req, res) => {
+  res.json({ message: 'Olympique Bot API', status: 'ok' })
+})
+
+// ---- API fallback 404 for unknown API routes
+app.use('/api/*', (req, res) => {
   res.status(404).json({ error: 'API not found' })
 })
 
-// ---- SPA catch-all (named wildcard)
-app.get('/{*splat}', (req, res) => {
-  res.sendFile(path.join(distPath, 'index.html'))
+// ---- Redirect non-API routes to frontend on Render
+app.get('*', (req, res) => {
+  const frontendUrl = process.env.FRONTEND_URL
+  return res.redirect(frontendUrl + req.originalUrl)
 })
 
 
 
 
 // ---- start
-const PORT = process.env.PORT || 4000
-app.listen(PORT, '0.0.0.0', () => console.log(`Backend started on ${PORT}`))
+// Export for Vercel serverless
+module.exports = app
+
+// Start server locally (not in Vercel)
+if (require.main === module) {
+  const PORT = process.env.PORT || 4000
+  app.listen(PORT, '0.0.0.0', () => console.log(`Backend started on ${PORT}`))
+}
