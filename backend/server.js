@@ -456,7 +456,7 @@ app.get('/', (req, res) => {
 })
 
 // ---- API fallback 404 for unknown API routes
-app.use('/api/:splat*', (req, res) => {
+app.use('/api/{*splat}', (req, res) => {
   res.status(404).json({ error: 'API not found' })
 })
 
