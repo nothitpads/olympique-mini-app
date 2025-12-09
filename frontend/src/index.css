@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 :root{
   --accent-start: #795AF3;
   --accent-end:   #977CFF;
@@ -53,8 +55,8 @@
 .stat-compact.w-full { flex: 1 1 0; }
 
 /* base utilities and tokens */
-html,body,#root { height:100%; }
-.app-shell { min-height:100vh; display:flex; flex-direction:column; background:var(--bg); color: var(--ink); }
+html,body,#root { height:100%; font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+.app-shell { min-height:100vh; display:flex; flex-direction:column; background:var(--bg); color: var(--ink); font-family: inherit; }
 .card { border-radius:20px; background:var(--card); box-shadow: var(--shadow-soft); border:1px solid var(--stroke); }
 .bg-accent { background: linear-gradient(120deg,var(--accent-start),var(--accent-end)); color:#fff; }
 .pill { border-radius:999px; padding:6px 12px; background:var(--surface); color:var(--ink); border:1px solid var(--stroke); }
