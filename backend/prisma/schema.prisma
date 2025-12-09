@@ -44,6 +44,9 @@ model User {
   tracking    Tracking[]
   attendance  Attendance[]
   workoutPlan WorkoutPlan[]
+  trainerProfile TrainerProfile?
+  trainerReviews TrainerReview[] @relation("TrainerReviewTrainer")
+  writtenReviews TrainerReview[] @relation("TrainerReviewUser")
   trainer     User?       @relation("UserTrainer", fields: [trainer_id], references: [id])
   trainees    User[]      @relation("UserTrainer")
 
@@ -140,4 +143,42 @@ model WorkoutPlan {
 
   @@unique([user_id, day_of_week], map: "ux_workout_plan_user_day")
   @@map("workout_plan")
+}
+
+model TrainerProfile {
+  id               Int       @id @default(autoincrement())
+  user_id          Int       @unique
+  headline         String?
+  bio              String?
+  years_experience Int?
+  location         String?
+  price_from       Int?
+  languages        String[]  @default([])
+  specialties      String[]  @default([])
+  certifications   String[]  @default([])
+  rating_avg       Float?    @default(0)
+  rating_count     Int       @default(0)
+  hero_url         String?
+  contact_url      String?
+  telegram_username String?
+  created_at       DateTime  @default(now())
+
+  user     User            @relation(fields: [user_id], references: [id])
+
+  @@map("trainer_profile")
+}
+
+model TrainerReview {
+  id         Int      @id @default(autoincrement())
+  trainer_id Int
+  user_id    Int?
+  rating     Int
+  comment    String?
+  created_at DateTime @default(now())
+
+  trainer User   @relation("TrainerReviewTrainer", fields: [trainer_id], references: [id])
+  user    User?  @relation("TrainerReviewUser", fields: [user_id], references: [id])
+
+  @@index([trainer_id], map: "idx_trainer_reviews_trainer")
+  @@map("trainer_reviews")
 }

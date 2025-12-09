@@ -127,6 +127,7 @@ export default function BottomNav({ user }){
   const athleteTabs = [
     { path: '/', label: 'Главная', icon: IconHome },
     { path: '/calendar', label: 'План', icon: IconPlan },
+    { path: '/trainers', label: 'Тренеры', icon: IconClients, match: (path) => path === '/trainers' || path.startsWith('/trainers/') },
     { path: '/tracking', label: 'Трекинг', icon: IconTracking },
     { path: '/profile', label: 'Профиль', icon: IconProfile }
   ]

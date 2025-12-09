@@ -30,7 +30,9 @@ const {
   bulkUpsertWorkoutPlanEntriesForClient,
   addTrainerNutritionEntry,
   markTrainerAttendance,
-  assertTrainerAccess
+  assertTrainerAccess,
+  listTrainers,
+  getTrainerPublicProfile
 } = require('./src/db/db')
 const {
   autocompleteFoods,
@@ -227,6 +229,38 @@ app.post('/api/me/workout-plan', authMiddleware, async (req, res) => {
     const status = err.message === 'invalid_day' || err.message === 'title_required' ? 400 : 500
     console.error('workout plan POST error', err)
     res.status(status).json({ error: err.message })
+  }
+})
+
+// trainer catalogue (public for authenticated users)
+app.get('/api/trainers', authMiddleware, async (req, res) => {
+  try {
+    const result = await listTrainers({
+      page: req.query.page,
+      limit: req.query.limit,
+      search: req.query.search,
+      specialty: req.query.specialty,
+      location: req.query.location,
+      language: req.query.language,
+      minExperience: req.query.minExperience,
+      minRating: req.query.minRating,
+      sort: req.query.sort
+    })
+    res.json(result)
+  } catch (err) {
+    console.error('trainer catalogue error', err)
+    res.status(500).json({ error: 'failed_to_load_trainers' })
+  }
+})
+
+app.get('/api/trainers/:trainerId', authMiddleware, async (req, res) => {
+  try {
+    const profile = await getTrainerPublicProfile(req.params.trainerId)
+    if (!profile) return res.status(404).json({ error: 'trainer_not_found' })
+    res.json(profile)
+  } catch (err) {
+    console.error('trainer profile error', err)
+    res.status(500).json({ error: 'failed_to_load_trainer' })
   }
 })
 

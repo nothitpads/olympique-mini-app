@@ -102,6 +102,13 @@ function formatUserName(user = {}) {
   return 'Без имени'
 }
 
+function buildContactUrl(profile = {}, user = {}) {
+  if (profile.contact_url) return profile.contact_url
+  const username = profile.telegram_username || user.username
+  if (username) return `https://t.me/${username}`
+  return null
+}
+
 function analyzeNutritionStatus(calories, calorieTarget, protein, proteinTarget) {
   if (!calorieTarget && !proteinTarget) return 'not_set'
   const statusForValue = (value, target) => {
@@ -828,6 +835,202 @@ async function getTrainerMonitoringSummary(trainerId, options = {}) {
   }
 }
 
+async function listTrainers(filters = {}) {
+  const page = Math.max(Number(filters.page) || 1, 1)
+  const limit = Math.min(Math.max(Number(filters.limit) || 10, 1), 50)
+  const skip = (page - 1) * limit
+  const profileFilters = {}
+
+  if (filters.specialty) {
+    profileFilters.specialties = { has: filters.specialty }
+  }
+  if (filters.language) {
+    profileFilters.languages = { has: filters.language }
+  }
+  if (filters.location) {
+    profileFilters.location = { contains: filters.location, mode: 'insensitive' }
+  }
+  if (filters.minExperience) {
+    profileFilters.years_experience = { gte: Number(filters.minExperience) }
+  }
+  if (filters.minRating) {
+    profileFilters.rating_avg = { gte: Number(filters.minRating) }
+  }
+
+  const clauses = [
+    {
+      role: 'trainer',
+      trainerProfile: {
+        isNot: null
+      }
+    }
+  ]
+
+  if (Object.keys(profileFilters).length > 0) {
+    clauses.push({ trainerProfile: profileFilters })
+  }
+
+  const search = (filters.search || '').trim()
+  if (search) {
+    clauses.push({
+      OR: [
+        { first_name: { contains: search, mode: 'insensitive' } },
+        { last_name: { contains: search, mode: 'insensitive' } },
+        { username: { contains: search, mode: 'insensitive' } },
+        { trainerProfile: { headline: { contains: search, mode: 'insensitive' } } },
+        { trainerProfile: { specialties: { has: search } } }
+      ]
+    })
+  }
+
+  const where = { AND: clauses }
+
+  let orderBy = [{ created_at: 'desc' }]
+  const sort = (filters.sort || '').toLowerCase()
+  if (sort === 'rating') {
+    orderBy = [{ trainerProfile: { rating_avg: 'desc' } }, { trainerProfile: { rating_count: 'desc' } }]
+  } else if (sort === 'experience') {
+    orderBy = [{ trainerProfile: { years_experience: 'desc' } }]
+  } else if (sort === 'price') {
+    orderBy = [{ trainerProfile: { price_from: 'asc' } }]
+  }
+
+  const [trainers, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        username: true,
+        first_name: true,
+        last_name: true,
+        photo_url: true,
+        trainerProfile: {
+          select: {
+            headline: true,
+            years_experience: true,
+            location: true,
+            price_from: true,
+            languages: true,
+            specialties: true,
+            certifications: true,
+            rating_avg: true,
+            rating_count: true,
+            hero_url: true,
+            contact_url: true,
+            telegram_username: true
+          }
+        }
+      },
+      orderBy,
+      skip,
+      take: limit
+    }),
+    prisma.user.count({ where })
+  ])
+
+  const items = trainers.map((trainer) => {
+    const profile = trainer.trainerProfile || {}
+    return {
+      id: trainer.id,
+      name: formatUserName(trainer),
+      headline: profile.headline || null,
+      location: profile.location || null,
+      yearsExperience: profile.years_experience ?? null,
+      rating: profile.rating_avg ?? null,
+      reviewCount: profile.rating_count ?? 0,
+      priceFrom: profile.price_from ?? null,
+      specialties: profile.specialties || [],
+      languages: profile.languages || [],
+      certifications: profile.certifications || [],
+      heroUrl: profile.hero_url || trainer.photo_url || null,
+      avatar: trainer.photo_url || null,
+      contactUrl: buildContactUrl(profile, trainer),
+      telegramUsername: profile.telegram_username || trainer.username || null
+    }
+  })
+
+  return {
+    items,
+    page,
+    limit,
+    total,
+    totalPages: Math.max(Math.ceil(total / limit), 1)
+  }
+}
+
+async function getTrainerPublicProfile(trainerId) {
+  const numericId = Number(trainerId)
+  if (!numericId) return null
+
+  const trainer = await prisma.user.findFirst({
+    where: {
+      id: numericId,
+      role: 'trainer',
+      trainerProfile: { isNot: null }
+    },
+    select: {
+      id: true,
+      username: true,
+      first_name: true,
+      last_name: true,
+      photo_url: true,
+      trainerProfile: true,
+      trainerReviews: {
+        orderBy: { created_at: 'desc' },
+        take: 10,
+        select: {
+          id: true,
+          rating: true,
+          comment: true,
+          created_at: true,
+          user: {
+            select: {
+              first_name: true,
+              last_name: true,
+              username: true,
+              photo_url: true
+            }
+          }
+        }
+      }
+    }
+  })
+
+  if (!trainer || !trainer.trainerProfile) return null
+  const profile = trainer.trainerProfile
+
+  return {
+    id: trainer.id,
+    name: formatUserName(trainer),
+    headline: profile.headline || null,
+    bio: profile.bio || null,
+    location: profile.location || null,
+    yearsExperience: profile.years_experience ?? null,
+    rating: profile.rating_avg ?? null,
+    reviewCount: profile.rating_count ?? 0,
+    priceFrom: profile.price_from ?? null,
+    specialties: profile.specialties || [],
+    languages: profile.languages || [],
+    certifications: profile.certifications || [],
+    heroUrl: profile.hero_url || trainer.photo_url || null,
+    avatar: trainer.photo_url || null,
+    contactUrl: buildContactUrl(profile, trainer),
+    telegramUsername: profile.telegram_username || trainer.username || null,
+    reviews: (trainer.trainerReviews || []).map((row) => ({
+      id: row.id,
+      rating: row.rating,
+      comment: row.comment,
+      createdAt: row.created_at,
+      author: row.user
+        ? {
+            name: formatUserName(row.user),
+            avatar: row.user.photo_url || null
+          }
+        : null
+    }))
+  }
+}
+
 async function setClientNutritionTargets(clientId, targets = {}) {
   if (!clientId) throw new Error('client_required')
   const data = {}
@@ -919,5 +1122,7 @@ module.exports = {
   bulkUpsertWorkoutPlanEntriesForClient,
   addTrainerNutritionEntry,
   markTrainerAttendance,
-  assertTrainerAccess
+  assertTrainerAccess,
+  listTrainers,
+  getTrainerPublicProfile
 }
