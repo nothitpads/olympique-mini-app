@@ -59,8 +59,11 @@ export default function ProgressCard({
       </div>
       {hasAllValues ? (
         <>
-          <div className="w-full bg-white/6 rounded-full h-3 overflow-hidden">
-            <div style={{width:`${percent}%`, background: 'linear-gradient(90deg,#d8ff37,#a6ff3a)'}} className="h-3 bg-gradient-to-r"></div>
+          <div className="w-full rounded-full h-3 overflow-hidden" style={{background:'#e9e5ff'}}>
+            <div
+              style={{width:`${percent}%`, background: 'linear-gradient(120deg,var(--accent-start),var(--accent-contrast))'}}
+              className="h-3 bg-gradient-to-r"
+            ></div>
           </div>
           <div className="flex justify-between text-sm small-muted mt-3">
             <div>Старт {formatLabel(start, startNumeric, unit)}</div>

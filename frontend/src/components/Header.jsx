@@ -10,7 +10,10 @@ export default function Header({title='Привет', subtitle, avatar}) {
           {subtitle && <div className="small-muted mb-1">{subtitle}</div>}
           <div className="text-2xl font-bold leading-tight">{title}</div>
         </div>
-        <div className="w-12 h-12 rounded-full overflow-hidden border border-white/8 bg-white/5">
+        <div
+          className="w-12 h-12 rounded-full overflow-hidden border shadow"
+          style={{ borderColor: 'var(--stroke)', background: 'var(--surface)' }}
+        >
           <img src={avatarSrc} alt="avatar" className="w-full h-full object-cover"/>
         </div>
       </div>

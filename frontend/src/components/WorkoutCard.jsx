@@ -27,8 +27,11 @@ export default function WorkoutCard({
   return (
     <div className={containerClasses} style={{ minWidth }}>
       {!compact && (
-        <div className="h-40 bg-white/4 flex items-end p-4">
-          {info && <div className="bg-white/6 px-3 py-1 rounded-full small-muted">{info}</div>}
+        <div
+          className="h-40 flex items-end p-4"
+          style={{background:'linear-gradient(140deg, var(--accent-start), var(--accent-end))'}}
+        >
+          {info && <div className="px-3 py-1 rounded-full text-xs font-semibold text-white bg-white/20 backdrop-blur">{info}</div>}
         </div>
       )}
       <div className="p-4">

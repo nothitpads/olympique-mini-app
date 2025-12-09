@@ -1,7 +1,7 @@
 import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 
-const iconColor = (active) => (active ? '#fff' : 'rgba(255,255,255,0.45)')
+const iconColor = (active) => (active ? '#fff' : 'var(--muted)')
 
 const IconHome = ({ active }) => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -112,7 +112,7 @@ const IconMonitoring = ({ active }) => (
 const Tab = ({ label, active, onClick, icon: Icon }) => (
   <button
     onClick={onClick}
-    className={`flex-1 py-2 flex flex-col items-center text-xs ${active ? 'text-white' : 'text-gray-400'}`}
+    className={`bottom-nav__tab ${active ? 'bottom-nav__tab--active' : ''}`}
   >
     <div className="w-6 h-6 mb-1">{Icon ? <Icon active={active} /> : null}</div>
     <div>{label}</div>
@@ -145,9 +145,9 @@ export default function BottomNav({ user }){
   }
 
   return (
-    <div className="fixed left-0 right-0 bottom-0 bg-transparent safe-bottom" style={{backdropFilter:'blur(8px)'}}>
-      <div className="max-w-lg mx-auto px-3 pt-3 pb-4">
-        <div className="bg-black/50 rounded-2xl px-2 py-1 flex items-center">
+    <div className="bottom-nav safe-bottom">
+      <div className="bottom-nav__inner">
+        <div className="bottom-nav__bar">
           {tabs.map((tab) => (
             <Tab
               key={tab.path}

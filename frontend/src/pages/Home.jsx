@@ -94,9 +94,9 @@ export default function Home({ user }){
               <div className="font-semibold text-lg">{planToday.title}</div>
             </div>
           )}
-          {loading && <div className="card p-4 rounded-2xl text-gray-400">Загружаем тренировки…</div>}
+          {loading && <div className="card p-4 rounded-2xl small-muted">Загружаем тренировки…</div>}
           {!loading && todaysWorkouts.length === 0 && !planToday && (
-            <div className="card p-4 rounded-2xl text-gray-400">
+            <div className="card p-4 rounded-2xl small-muted">
               Нет тренировок на сегодня. Задайте план в календаре.
             </div>
           )}
