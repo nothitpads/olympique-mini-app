@@ -1363,7 +1363,8 @@ async function getPendingTrainerApprovals() {
       years_experience: u.trainerProfile.years_experience,
       location: u.trainerProfile.location,
       specialties: u.trainerProfile.specialties,
-      certifications: u.trainerProfile.certifications
+      certifications: u.trainerProfile.certifications,
+      hero_url: u.trainerProfile.hero_url
     } : null
   }))
 }

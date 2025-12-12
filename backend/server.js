@@ -9,6 +9,7 @@ const { authMiddleware } = require('./src/middleware/auth')
 const { BOT_TOKEN, JWT_SECRET } = require('./src/config')
 
 const {
+  prisma,
   findUserByTelegramId,
   findUserById,
   createUser,
