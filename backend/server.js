@@ -33,6 +33,8 @@ const {
   markTrainerAttendance,
   assertTrainerAccess,
   listTrainers,
+  upsertTrainerProfile,
+  getTrainerProfileForUser,
   getTrainerPublicProfile,
   // Admin functions
   findUserByEmail,
@@ -301,6 +303,31 @@ app.get('/api/me/dashboard', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('dashboard error', err)
     res.status(500).json({ error: 'failed_to_load_dashboard' })
+  }
+})
+
+// submit or update trainer profile (for approval)
+app.get('/api/me/trainer-profile', authMiddleware, async (req, res) => {
+  try {
+    const profile = await getTrainerProfileForUser(req.userId)
+    res.json(profile || null)
+  } catch (err) {
+    console.error('trainer profile GET error', err)
+    res.status(500).json({ error: 'failed_to_load_trainer_profile' })
+  }
+})
+
+app.post('/api/me/trainer-profile', authMiddleware, async (req, res) => {
+  const body = req.body || {}
+  if (!body.headline && !body.bio) {
+    return res.status(400).json({ error: 'headline_or_bio_required' })
+  }
+  try {
+    const profile = await upsertTrainerProfile(req.userId, body)
+    res.json({ ok: true, profile })
+  } catch (err) {
+    console.error('trainer profile POST error', err)
+    res.status(500).json({ error: 'failed_to_save_trainer_profile' })
   }
 })
 

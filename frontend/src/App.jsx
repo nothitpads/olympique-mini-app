@@ -12,6 +12,7 @@ import TrainerClientProfile from './pages/TrainerClientProfile'
 import TrainerMonitoring from './pages/TrainerMonitoring'
 import Trainers from './pages/Trainers'
 import TrainerProfile from './pages/TrainerProfile'
+import ApplyTrainer from './pages/ApplyTrainer'
 import BottomNav from './components/BottomNav'
 import useAuth from './hooks/useAuth'
 import './index.css'
@@ -58,6 +59,7 @@ export default function App(){
               <Route path="/calendar" element={<Calendar user={user}/>} />
               <Route path="/tracking" element={<Tracking user={user} setUser={setUser}/>} />
               <Route path="/profile" element={<Profile user={user}/>} />
+              <Route path="/apply-trainer" element={<ApplyTrainer />} />
               <Route path="/coach" element={<CoachDashboard user={user}/>} />
               <Route path="/trainers" element={<Trainers user={user} />} />
               <Route path="/trainers/:trainerId" element={<TrainerProfile />} />

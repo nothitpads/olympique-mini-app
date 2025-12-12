@@ -64,6 +64,15 @@ export default function Profile({ user }){
         </div>
 
         <div className="mt-6">
+          {user?.role !== 'trainer' && (
+            <button
+              type="button"
+              className="btn-primary w-full mb-3"
+              onClick={() => navigate('/apply-trainer')}
+            >
+              Стать тренером
+            </button>
+          )}
           <a
             href={reportIssueLink}
             target="_blank"

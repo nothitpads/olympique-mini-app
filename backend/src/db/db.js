@@ -958,6 +958,72 @@ async function listTrainers(filters = {}) {
   }
 }
 
+async function upsertTrainerProfile(userId, payload = {}) {
+  if (!userId) throw new Error('user_required')
+
+  const arrayOrEmpty = (value) =>
+    Array.isArray(value)
+      ? value.map((v) => String(v).trim()).filter(Boolean)
+      : typeof value === 'string'
+        ? value
+            .split(',')
+            .map((v) => v.trim())
+            .filter(Boolean)
+        : []
+
+  const data = {
+    headline: payload.headline ?? null,
+    bio: payload.bio ?? null,
+    years_experience:
+      payload.years_experience === undefined || payload.years_experience === null
+        ? null
+        : Number(payload.years_experience),
+    location: payload.location ?? null,
+    price_from:
+      payload.price_from === undefined || payload.price_from === null ? null : Number(payload.price_from),
+    languages: arrayOrEmpty(payload.languages),
+    specialties: arrayOrEmpty(payload.specialties),
+    certifications: arrayOrEmpty(payload.certifications),
+    hero_url: payload.hero_url ?? null,
+    contact_url: payload.contact_url ?? null,
+    telegram_username: payload.telegram_username ?? null
+  }
+
+  return prisma.trainerProfile.upsert({
+    where: { user_id: Number(userId) },
+    update: data,
+    create: {
+      user_id: Number(userId),
+      ...data
+    }
+  })
+}
+
+async function getTrainerProfileForUser(userId) {
+  if (!userId) return null
+  const trainer = await prisma.user.findUnique({
+    where: { id: Number(userId) },
+    include: { trainerProfile: true }
+  })
+  if (!trainer || !trainer.trainerProfile) return null
+  const profile = trainer.trainerProfile
+  return {
+    id: trainer.id,
+    name: formatUserName(trainer),
+    headline: profile.headline || null,
+    bio: profile.bio || null,
+    location: profile.location || null,
+    years_experience: profile.years_experience ?? null,
+    price_from: profile.price_from ?? null,
+    languages: profile.languages || [],
+    specialties: profile.specialties || [],
+    certifications: profile.certifications || [],
+    hero_url: profile.hero_url || null,
+    contact_url: profile.contact_url || null,
+    telegram_username: profile.telegram_username || trainer.username || null
+  }
+}
+
 async function getTrainerPublicProfile(trainerId) {
   const numericId = Number(trainerId)
   if (!numericId) return null
@@ -1402,6 +1468,8 @@ module.exports = {
   markTrainerAttendance,
   assertTrainerAccess,
   listTrainers,
+  upsertTrainerProfile,
+  getTrainerProfileForUser,
   getTrainerPublicProfile,
   // Admin functions
   findUserByEmail,
