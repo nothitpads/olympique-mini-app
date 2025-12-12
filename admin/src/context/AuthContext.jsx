@@ -10,19 +10,22 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     // Check if there's a token in localStorage
     const token = localStorage.getItem('admin_token')
-    if (token) {
-      // Token exists, but we don't auto-validate it
-      // User will be set on successful login
-      setLoading(false)
-    } else {
-      setLoading(false)
+    const storedUser = localStorage.getItem('admin_user')
+    if (token && storedUser) {
+      try {
+        setUser(JSON.parse(storedUser))
+      } catch (e) {
+        localStorage.removeItem('admin_user')
+      }
     }
+    setLoading(false)
   }, [])
 
   const login = async (email, password) => {
     try {
       const data = await api.login(email, password)
       setUser(data.user)
+      localStorage.setItem('admin_user', JSON.stringify(data.user))
       return { success: true }
     } catch (error) {
       return { success: false, error: error.message }
@@ -32,6 +35,7 @@ export function AuthProvider({ children }) {
   const logout = () => {
     api.logout()
     setUser(null)
+    localStorage.removeItem('admin_user')
   }
 
   return (

@@ -138,7 +138,7 @@ export default function BottomNav({ user }){
     { path: '/monitoring', label: 'Мониторинг', icon: IconMonitoring }
   ]
 
-  const tabs = isTrainer ? trainerTabs : athleteTabs
+  const tabs = (isTrainer ? trainerTabs : athleteTabs).filter((tab) => tab.path !== '/trainers')
 
   const isActive = (tabPath, match) => {
     if (typeof match === 'function') return match(loc.pathname)
