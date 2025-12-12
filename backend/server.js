@@ -266,6 +266,62 @@ app.post('/api/auth/admin/login', adminLoginLimiter, async (req, res) => {
   }
 })
 
+// Admin: update basic trainer profile (name/photo/bio/location/cv link)
+app.patch('/api/admin/trainers/:userId/profile', authMiddleware, adminOnly, async (req, res) => {
+  const { userId } = req.params
+  const body = req.body || {}
+
+  if (body.hero_url && !isValidUrlMaybe(body.hero_url)) {
+    return res.status(400).json({ error: 'invalid_cv_link' })
+  }
+
+  try {
+    const user = await findUserById(userId)
+    if (!user) return res.status(404).json({ error: 'user_not_found' })
+
+    // Update name and photo
+    if (body.full_name) {
+      const parts = body.full_name.trim().split(' ').filter(Boolean)
+      const first_name = parts[0] || null
+      const last_name = parts.length > 1 ? parts.slice(1).join(' ') : null
+      await updateUserProfile(userId, { first_name, last_name })
+    }
+    if (body.photo_url) {
+      await updateUserProfile(userId, { photo_url: body.photo_url })
+    }
+
+    // Upsert trainer profile (bio/headline/location/hero_url)
+    const payload = {
+      headline: body.full_name || body.headline || null,
+      bio: body.bio ?? null,
+      location: body.location ?? null,
+      years_experience: body.years_experience ?? null,
+      hero_url: body.hero_url ?? null,
+      languages: [],
+      specialties: [],
+      certifications: [],
+      contact_url: user?.username ? `https://t.me/${user.username.replace('@', '')}` : null,
+      telegram_username: user?.username || null
+    }
+    const profile = await upsertTrainerProfile(userId, payload)
+
+    // Log action
+    await logAdminAction(
+      req.userId,
+      'trainer.profile.update',
+      Number(userId),
+      'user',
+      { fields: Object.keys(body) },
+      req.headers['x-forwarded-for'] || req.connection.remoteAddress
+    )
+
+    res.json({ ok: true, profile })
+  } catch (err) {
+    console.error('admin trainer profile update error', err)
+    res.status(500).json({ error: 'failed_to_update_trainer_profile' })
+  }
+})
+
 // Admin registration (protected - only admins can create other admins)
 app.post('/api/auth/admin/register', authMiddleware, adminOnly, async (req, res) => {
   const { email, password, first_name, last_name } = req.body || {}

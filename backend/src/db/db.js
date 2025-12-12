@@ -859,10 +859,7 @@ async function listTrainers(filters = {}) {
 
   const clauses = [
     {
-      role: 'trainer',
-      trainerProfile: {
-        isNot: null
-      }
+      role: 'trainer'
     }
   ]
 
@@ -933,7 +930,7 @@ async function listTrainers(filters = {}) {
     return {
       id: trainer.id,
       name: formatUserName(trainer),
-      headline: profile.headline || null,
+      headline: profile.bio || profile.headline || null,
       location: profile.location || null,
       yearsExperience: profile.years_experience ?? null,
       rating: profile.rating_avg ?? null,
