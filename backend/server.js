@@ -871,20 +871,8 @@ app.post('/api/admin/trainers/:userId/approve', authMiddleware, adminOnly, async
       
       res.json({ success: true, message: 'trainer_approved' })
     } else {
-      // On reject: remove trainer profile so it disappears from pending
-      await upsertTrainerProfile(req.params.userId, {
-        headline: null,
-        bio: null,
-        years_experience: null,
-        location: null,
-        price_from: null,
-        languages: [],
-        specialties: [],
-        certifications: [],
-        hero_url: null,
-        contact_url: null,
-        telegram_username: null
-      })
+      // On reject: delete trainer profile so it disappears from pending list
+      await prisma.trainerProfile.deleteMany({ where: { user_id: Number(req.params.userId) } })
       await logAdminAction(
         req.userId,
         'trainer.reject',

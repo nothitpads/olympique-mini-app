@@ -92,15 +92,16 @@ export default function ApplyTrainer() {
     <div className="pt-3 pb-24">
       <Header title="Стать тренером" subtitle="Заполните профиль для модерации" />
       <div className="max-w-lg mx-auto px-4">
-        {prefillLoading && <div className="card p-3 mb-3 text-sm text-gray-300">Загружаем профиль…</div>}
-        {error && (
-          <div className="card p-3 mb-3 text-sm text-red-200 border border-red-500/40 bg-red-500/10">{error}</div>
-        )}
-        {success && (
-          <div className="card p-3 mb-3 text-sm text-emerald-200 border border-emerald-500/40 bg-emerald-500/10">
-            {success}
-          </div>
-        )}
+        <div className="card p-4 rounded-2xl bg-white/80 shadow">
+          {prefillLoading && <div className="text-sm text-gray-500 mb-3">Загружаем профиль…</div>}
+          {error && (
+            <div className="p-3 mb-3 text-sm text-red-200 border border-red-500/40 bg-red-500/10 rounded-xl">{error}</div>
+          )}
+          {success && (
+            <div className="p-3 mb-3 text-sm text-emerald-200 border border-emerald-500/40 bg-emerald-500/10 rounded-xl">
+              {success}
+            </div>
+          )}
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
             <label className="form-label">Полное имя*</label>
@@ -152,7 +153,7 @@ export default function ApplyTrainer() {
               onChange={update('cv_link')}
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 pt-2">
             <button
               type="submit"
               className="btn-primary w-full h-12"
@@ -168,11 +169,12 @@ export default function ApplyTrainer() {
               Назад
             </button>
           </div>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-400 pt-1">
             После отправки заявка попадет на модерацию. Если всё ок, администратор активирует ваш
             профиль тренера, и вы сможете работать с клиентами.
           </p>
         </form>
+        </div>
       </div>
     </div>
   )

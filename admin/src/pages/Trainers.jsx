@@ -80,12 +80,12 @@ export default function Trainers() {
 
               {trainer.profile && (
                 <div className="trainer-details">
-                  {trainer.profile.bio && (
-                    <div className="trainer-bio-block">
-                      <div className="label">CV / Summary:</div>
-                      <p className="trainer-bio">{trainer.profile.bio}</p>
-                    </div>
-                  )}
+                  <div className="trainer-bio-block">
+                    <div className="label">CV / Summary:</div>
+                    <p className="trainer-bio">
+                      {trainer.profile.bio || 'No CV provided.'}
+                    </p>
+                  </div>
 
                   <div className="trainer-info">
                     {trainer.profile.years_experience && (
@@ -95,12 +95,10 @@ export default function Trainers() {
                       </div>
                     )}
 
-                    {trainer.profile.location && (
-                      <div className="info-item">
-                        <span className="label">City:</span>
-                        <span>{trainer.profile.location}</span>
-                      </div>
-                    )}
+                    <div className="info-item">
+                      <span className="label">City:</span>
+                      <span>{trainer.profile.location || '—'}</span>
+                    </div>
                   </div>
 
                   {trainer.profile.hero_url && (
@@ -117,12 +115,14 @@ export default function Trainers() {
                     </div>
                   )}
 
-                  {trainer.profile.specialties && trainer.profile.specialties.length > 0 && (
+                  {trainer.profile.specialties && trainer.profile.specialties.length > 0 ? (
                     <div className="tags">
                       {trainer.profile.specialties.map((spec, idx) => (
                         <span key={idx} className="tag">{spec}</span>
                       ))}
                     </div>
+                  ) : (
+                    <div className="info-item small-muted">No specialties listed.</div>
                   )}
                 </div>
               )}
