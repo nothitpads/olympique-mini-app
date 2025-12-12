@@ -19,11 +19,14 @@ datasource db {
 enum Role {
   user
   trainer
+  admin
 }
 
 model User {
   id          Int         @id @default(autoincrement())
   telegram_id String?     @unique
+  email       String?     @unique
+  password    String?
   username    String?
   first_name  String?
   last_name   String?
@@ -37,6 +40,7 @@ model User {
   role        Role        @default(user)
   trainer_id  Int?
   created_at  DateTime    @default(now())
+  updated_at  DateTime    @default(now()) @updatedAt
 
   clients     Client[]    @relation("trainerClients")
   workouts    Workout[]   @relation("trainerWorkouts")
@@ -49,9 +53,11 @@ model User {
   writtenReviews TrainerReview[] @relation("TrainerReviewUser")
   trainer     User?       @relation("UserTrainer", fields: [trainer_id], references: [id])
   trainees    User[]      @relation("UserTrainer")
+  auditLogs   AuditLog[]
 
   @@map("users")
   @@index([trainer_id], map: "idx_users_trainer_id")
+  @@index([email], map: "idx_users_email")
 }
 
 model Client {
@@ -181,4 +187,21 @@ model TrainerReview {
 
   @@index([trainer_id], map: "idx_trainer_reviews_trainer")
   @@map("trainer_reviews")
+}
+
+model AuditLog {
+  id          Int      @id @default(autoincrement())
+  admin_id    Int
+  action      String
+  target_id   Int?
+  target_type String?
+  details     Json?
+  ip_address  String?
+  created_at  DateTime @default(now())
+
+  admin User @relation(fields: [admin_id], references: [id])
+
+  @@index([admin_id], map: "idx_audit_logs_admin")
+  @@index([created_at], map: "idx_audit_logs_created")
+  @@map("audit_logs")
 }

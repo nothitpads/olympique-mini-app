@@ -1,6 +1,7 @@
 const express = require('express')
 const cors = require('cors')
 const jwt = require('jsonwebtoken')
+const bcrypt = require('bcrypt')
 const { validate: validateInitData, parse: parseInitData } = require('@telegram-apps/init-data-node')
 require('dotenv').config()
 const { authMiddleware } = require('./src/middleware/auth')
@@ -32,7 +33,17 @@ const {
   markTrainerAttendance,
   assertTrainerAccess,
   listTrainers,
-  getTrainerPublicProfile
+  getTrainerPublicProfile,
+  // Admin functions
+  findUserByEmail,
+  createAdmin,
+  getAllUsers,
+  updateUserRole,
+  deleteUser,
+  getPlatformStats,
+  getPendingTrainerApprovals,
+  logAdminAction,
+  getAuditLogs
 } = require('./src/db/db')
 const {
   autocompleteFoods,
@@ -62,6 +73,20 @@ function trainerOnly(req, res, next) {
       method: req.method
     })
     return res.status(403).json({ error: 'trainer_only', receivedRole: req.userRole })
+  }
+  next()
+}
+
+function adminOnly(req, res, next) {
+  if (req.userRole !== 'admin') {
+    console.error('[ADMIN_ONLY] Access denied:', {
+      userId: req.userId,
+      userRole: req.userRole,
+      expectedRole: 'admin',
+      path: req.path,
+      method: req.method
+    })
+    return res.status(403).json({ error: 'admin_only', receivedRole: req.userRole })
   }
   next()
 }
@@ -141,6 +166,108 @@ app.post('/api/auth/telegram-init', async (req, res) => {
     res.json({ token, user })
   } catch (err) {
     console.error('auth error', err)
+    res.status(500).json({ error: 'server_error' })
+  }
+})
+
+// Admin email/password login
+app.post('/api/auth/admin/login', async (req, res) => {
+  const { email, password } = req.body || {}
+  
+  if (!email || !password) {
+    return res.status(400).json({ error: 'email_and_password_required' })
+  }
+
+  try {
+    const user = await findUserByEmail(email)
+    
+    if (!user || !user.password) {
+      return res.status(401).json({ error: 'invalid_credentials' })
+    }
+
+    if (user.role !== 'admin') {
+      return res.status(403).json({ error: 'admin_only' })
+    }
+
+    const passwordMatch = await bcrypt.compare(password, user.password)
+    
+    if (!passwordMatch) {
+      return res.status(401).json({ error: 'invalid_credentials' })
+    }
+
+    const payload = { uid: user.id, role: user.role }
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '8h' })
+    
+    // Log the login action
+    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
+    await logAdminAction(user.id, 'admin.login', null, null, null, ip)
+    
+    res.json({ 
+      token, 
+      user: {
+        id: user.id,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        role: user.role
+      }
+    })
+  } catch (err) {
+    console.error('admin login error', err)
+    res.status(500).json({ error: 'server_error' })
+  }
+})
+
+// Admin registration (protected - only admins can create other admins)
+app.post('/api/auth/admin/register', authMiddleware, adminOnly, async (req, res) => {
+  const { email, password, first_name, last_name } = req.body || {}
+  
+  if (!email || !password) {
+    return res.status(400).json({ error: 'email_and_password_required' })
+  }
+
+  if (password.length < 8) {
+    return res.status(400).json({ error: 'password_too_short' })
+  }
+
+  try {
+    const existing = await findUserByEmail(email)
+    if (existing) {
+      return res.status(409).json({ error: 'email_already_exists' })
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10)
+    
+    const newAdmin = await createAdmin({
+      email,
+      password: hashedPassword,
+      first_name: first_name || null,
+      last_name: last_name || null
+    })
+
+    // Log the action
+    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
+    await logAdminAction(
+      req.userId, 
+      'admin.create', 
+      newAdmin.id, 
+      'user',
+      { email: newAdmin.email },
+      ip
+    )
+
+    res.json({ 
+      success: true,
+      admin: {
+        id: newAdmin.id,
+        email: newAdmin.email,
+        first_name: newAdmin.first_name,
+        last_name: newAdmin.last_name,
+        role: newAdmin.role
+      }
+    })
+  } catch (err) {
+    console.error('admin registration error', err)
     res.status(500).json({ error: 'server_error' })
   }
 })
@@ -486,6 +613,180 @@ app.post('/api/attendance', authMiddleware, async (req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
+
+// ===== Admin Routes =====
+
+// Get platform statistics
+app.get('/api/admin/stats', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const stats = await getPlatformStats()
+    res.json(stats)
+  } catch (err) {
+    console.error('admin stats error', err)
+    res.status(500).json({ error: 'failed_to_load_stats' })
+  }
+})
+
+// Get all users with pagination and filters
+app.get('/api/admin/users', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const result = await getAllUsers({
+      page: req.query.page,
+      limit: req.query.limit,
+      role: req.query.role,
+      search: req.query.search
+    })
+    res.json(result)
+  } catch (err) {
+    console.error('admin users list error', err)
+    res.status(500).json({ error: 'failed_to_load_users' })
+  }
+})
+
+// Get single user details
+app.get('/api/admin/users/:userId', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const user = await findUserById(req.params.userId)
+    if (!user) {
+      return res.status(404).json({ error: 'user_not_found' })
+    }
+    res.json(user)
+  } catch (err) {
+    console.error('admin user detail error', err)
+    res.status(500).json({ error: 'failed_to_load_user' })
+  }
+})
+
+// Update user role
+app.patch('/api/admin/users/:userId/role', authMiddleware, adminOnly, async (req, res) => {
+  const { role } = req.body || {}
+  
+  if (!role) {
+    return res.status(400).json({ error: 'role_required' })
+  }
+
+  try {
+    const updated = await updateUserRole(req.params.userId, role)
+    
+    // Log the action
+    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
+    await logAdminAction(
+      req.userId,
+      'user.role.update',
+      updated.id,
+      'user',
+      { old_role: req.body.old_role, new_role: role },
+      ip
+    )
+    
+    res.json({ success: true, user: updated })
+  } catch (err) {
+    console.error('admin update role error', err)
+    const status = err.message === 'invalid_role' ? 400 : 500
+    res.status(status).json({ error: err.message })
+  }
+})
+
+// Delete user
+app.delete('/api/admin/users/:userId', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const user = await findUserById(req.params.userId)
+    if (!user) {
+      return res.status(404).json({ error: 'user_not_found' })
+    }
+
+    await deleteUser(req.params.userId)
+    
+    // Log the action
+    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
+    await logAdminAction(
+      req.userId,
+      'user.delete',
+      user.id,
+      'user',
+      { email: user.email, username: user.username },
+      ip
+    )
+    
+    res.json({ success: true })
+  } catch (err) {
+    console.error('admin delete user error', err)
+    res.status(500).json({ error: 'failed_to_delete_user' })
+  }
+})
+
+// Get pending trainer approvals
+app.get('/api/admin/trainers/pending', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const pending = await getPendingTrainerApprovals()
+    res.json(pending)
+  } catch (err) {
+    console.error('admin pending trainers error', err)
+    res.status(500).json({ error: 'failed_to_load_pending_trainers' })
+  }
+})
+
+// Approve/reject trainer (update role)
+app.post('/api/admin/trainers/:userId/approve', authMiddleware, adminOnly, async (req, res) => {
+  const { approved } = req.body || {}
+  
+  try {
+    const user = await findUserById(req.params.userId)
+    if (!user) {
+      return res.status(404).json({ error: 'user_not_found' })
+    }
+
+    if (approved) {
+      await updateUserRole(req.params.userId, 'trainer')
+      
+      // Log the action
+      const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
+      await logAdminAction(
+        req.userId,
+        'trainer.approve',
+        user.id,
+        'user',
+        null,
+        ip
+      )
+      
+      res.json({ success: true, message: 'trainer_approved' })
+    } else {
+      // Log rejection
+      const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
+      await logAdminAction(
+        req.userId,
+        'trainer.reject',
+        user.id,
+        'user',
+        null,
+        ip
+      )
+      
+      res.json({ success: true, message: 'trainer_rejected' })
+    }
+  } catch (err) {
+    console.error('admin approve trainer error', err)
+    res.status(500).json({ error: 'failed_to_process_approval' })
+  }
+})
+
+// Get audit logs
+app.get('/api/admin/audit-logs', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const result = await getAuditLogs({
+      page: req.query.page,
+      limit: req.query.limit,
+      adminId: req.query.adminId,
+      action: req.query.action
+    })
+    res.json(result)
+  } catch (err) {
+    console.error('admin audit logs error', err)
+    res.status(500).json({ error: 'failed_to_load_audit_logs' })
+  }
+})
+
 // webhook (if needed)
 app.post('/webhook', (req, res) => {
   console.log('webhook body:', req.body)

@@ -1,0 +1,81 @@
+.audit-logs-page {
+  max-width: 1600px;
+}
+
+.audit-table {
+  width: 100%;
+  font-size: 0.875rem;
+}
+
+.audit-table .timestamp {
+  white-space: nowrap;
+  color: #718096;
+}
+
+.admin-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.admin-cell strong {
+  color: #2d3748;
+}
+
+.admin-cell small {
+  color: #718096;
+}
+
+.action-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.action-success {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.action-danger {
+  background: #fed7d7;
+  color: #991b1b;
+}
+
+.action-warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.action-info {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.target {
+  font-family: monospace;
+  background: #f7fafc;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.details {
+  display: block;
+  max-width: 300px;
+  overflow-x: auto;
+  background: #f7fafc;
+  padding: 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  white-space: pre;
+}
+
+.ip {
+  font-family: monospace;
+  color: #718096;
+  font-size: 0.8rem;
+}
+

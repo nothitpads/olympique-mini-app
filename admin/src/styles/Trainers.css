@@ -1,0 +1,163 @@
+.trainers-page {
+  max-width: 1400px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+  margin: 0 0 0.5rem 0;
+  color: #1a202c;
+}
+
+.empty-state p {
+  color: #718096;
+  margin: 0;
+}
+
+.trainers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+.trainer-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.trainer-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.trainer-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.trainer-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #1a202c;
+}
+
+.trainer-meta {
+  margin: 0.25rem 0 0 0;
+  color: #718096;
+  font-size: 0.875rem;
+}
+
+.trainer-details {
+  padding: 1.5rem;
+  flex: 1;
+}
+
+.trainer-headline {
+  font-weight: 600;
+  color: #2d3748;
+  margin: 0 0 0.75rem 0;
+}
+
+.trainer-bio {
+  color: #4a5568;
+  line-height: 1.6;
+  margin: 0 0 1rem 0;
+}
+
+.trainer-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.info-item {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.info-item .label {
+  font-weight: 600;
+  color: #4a5568;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tag {
+  padding: 0.25rem 0.75rem;
+  background: #e6fffa;
+  color: #047857;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.certifications {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.certifications strong {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #2d3748;
+}
+
+.certifications ul {
+  margin: 0;
+  padding-left: 1.5rem;
+  color: #4a5568;
+}
+
+.certifications li {
+  margin-bottom: 0.25rem;
+}
+
+.trainer-footer {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  background: #f7fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.trainer-footer .btn {
+  flex: 1;
+}
+
+.btn-success {
+  background: #10b981;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #059669;
+}
+

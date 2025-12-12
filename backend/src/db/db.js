@@ -1097,6 +1097,284 @@ async function markTrainerAttendance(clientId, payload = {}) {
   })
 }
 
+// ===== Admin Functions =====
+
+async function findUserByEmail(email) {
+  if (!email) return null
+  return prisma.user.findUnique({
+    where: { email: email.toLowerCase() }
+  })
+}
+
+async function createAdmin(payload = {}) {
+  if (!payload.email || !payload.password) {
+    throw new Error('email_and_password_required')
+  }
+  
+  const data = {
+    email: payload.email.toLowerCase(),
+    password: payload.password, // Should be hashed before calling this
+    first_name: payload.first_name || null,
+    last_name: payload.last_name || null,
+    role: 'admin'
+  }
+
+  return prisma.user.create({ data })
+}
+
+async function getAllUsers(filters = {}) {
+  const where = {}
+  
+  if (filters.role) {
+    where.role = filters.role
+  }
+  
+  if (filters.search) {
+    where.OR = [
+      { first_name: { contains: filters.search, mode: 'insensitive' } },
+      { last_name: { contains: filters.search, mode: 'insensitive' } },
+      { username: { contains: filters.search, mode: 'insensitive' } },
+      { email: { contains: filters.search, mode: 'insensitive' } }
+    ]
+  }
+
+  const page = Math.max(0, Number(filters.page) || 0)
+  const limit = Math.min(100, Math.max(1, Number(filters.limit) || 20))
+  const skip = page * limit
+
+  const [users, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { created_at: 'desc' },
+      include: {
+        trainerProfile: true,
+        _count: {
+          select: {
+            clients: true,
+            nutrition: true,
+            tracking: true
+          }
+        }
+      }
+    }),
+    prisma.user.count({ where })
+  ])
+
+  return {
+    users: users.map(u => ({
+      id: u.id,
+      telegram_id: u.telegram_id,
+      email: u.email,
+      username: u.username,
+      first_name: u.first_name,
+      last_name: u.last_name,
+      photo_url: u.photo_url,
+      role: u.role,
+      created_at: u.created_at,
+      hasTrainerProfile: !!u.trainerProfile,
+      stats: {
+        clientCount: u._count.clients || 0,
+        nutritionEntries: u._count.nutrition || 0,
+        trackingEntries: u._count.tracking || 0
+      }
+    })),
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    }
+  }
+}
+
+async function updateUserRole(userId, newRole) {
+  if (!userId || !newRole) {
+    throw new Error('user_id_and_role_required')
+  }
+  
+  if (!['user', 'trainer', 'admin'].includes(newRole)) {
+    throw new Error('invalid_role')
+  }
+
+  return prisma.user.update({
+    where: { id: Number(userId) },
+    data: { role: newRole }
+  })
+}
+
+async function deleteUser(userId) {
+  if (!userId) throw new Error('user_id_required')
+  
+  const numericId = Number(userId)
+  
+  // Delete related records first
+  await prisma.$transaction([
+    prisma.attendance.deleteMany({ where: { user_id: numericId } }),
+    prisma.tracking.deleteMany({ where: { user_id: numericId } }),
+    prisma.nutrition.deleteMany({ where: { user_id: numericId } }),
+    prisma.workoutPlan.deleteMany({ where: { user_id: numericId } }),
+    prisma.trainerReview.deleteMany({ where: { user_id: numericId } }),
+    prisma.trainerReview.deleteMany({ where: { trainer_id: numericId } }),
+    prisma.trainerProfile.deleteMany({ where: { user_id: numericId } }),
+    prisma.workout.deleteMany({ where: { trainer_id: numericId } }),
+    prisma.client.deleteMany({ where: { trainer_id: numericId } }),
+    prisma.user.delete({ where: { id: numericId } })
+  ])
+  
+  return { success: true }
+}
+
+async function getPlatformStats() {
+  const [
+    totalUsers,
+    totalTrainers,
+    totalAdmins,
+    recentUsers,
+    totalNutritionEntries,
+    totalTrackingEntries,
+    totalWorkouts
+  ] = await Promise.all([
+    prisma.user.count({ where: { role: 'user' } }),
+    prisma.user.count({ where: { role: 'trainer' } }),
+    prisma.user.count({ where: { role: 'admin' } }),
+    prisma.user.count({
+      where: {
+        created_at: {
+          gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+        }
+      }
+    }),
+    prisma.nutrition.count(),
+    prisma.tracking.count(),
+    prisma.workout.count()
+  ])
+
+  return {
+    users: {
+      total: totalUsers,
+      trainers: totalTrainers,
+      admins: totalAdmins,
+      recentSignups: recentUsers
+    },
+    activity: {
+      nutritionEntries: totalNutritionEntries,
+      trackingEntries: totalTrackingEntries,
+      workouts: totalWorkouts
+    }
+  }
+}
+
+async function getPendingTrainerApprovals() {
+  // Get users with trainer profile but still have 'user' role
+  const pendingTrainers = await prisma.user.findMany({
+    where: {
+      role: 'user',
+      trainerProfile: {
+        isNot: null
+      }
+    },
+    include: {
+      trainerProfile: true
+    },
+    orderBy: {
+      created_at: 'desc'
+    }
+  })
+
+  return pendingTrainers.map(u => ({
+    id: u.id,
+    name: formatUserName(u),
+    username: u.username,
+    photo_url: u.photo_url,
+    email: u.email,
+    telegram_id: u.telegram_id,
+    created_at: u.created_at,
+    profile: u.trainerProfile ? {
+      headline: u.trainerProfile.headline,
+      bio: u.trainerProfile.bio,
+      years_experience: u.trainerProfile.years_experience,
+      location: u.trainerProfile.location,
+      specialties: u.trainerProfile.specialties,
+      certifications: u.trainerProfile.certifications
+    } : null
+  }))
+}
+
+async function logAdminAction(adminId, action, targetId, targetType, details, ipAddress) {
+  return prisma.auditLog.create({
+    data: {
+      admin_id: Number(adminId),
+      action,
+      target_id: targetId ? Number(targetId) : null,
+      target_type: targetType || null,
+      details: details || null,
+      ip_address: ipAddress || null
+    }
+  })
+}
+
+async function getAuditLogs(filters = {}) {
+  const where = {}
+  
+  if (filters.adminId) {
+    where.admin_id = Number(filters.adminId)
+  }
+  
+  if (filters.action) {
+    where.action = { contains: filters.action, mode: 'insensitive' }
+  }
+
+  const page = Math.max(0, Number(filters.page) || 0)
+  const limit = Math.min(100, Math.max(1, Number(filters.limit) || 50))
+  const skip = page * limit
+
+  const [logs, total] = await Promise.all([
+    prisma.auditLog.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { created_at: 'desc' },
+      include: {
+        admin: {
+          select: {
+            id: true,
+            first_name: true,
+            last_name: true,
+            email: true,
+            username: true
+          }
+        }
+      }
+    }),
+    prisma.auditLog.count({ where })
+  ])
+
+  return {
+    logs: logs.map(log => ({
+      id: log.id,
+      action: log.action,
+      target_id: log.target_id,
+      target_type: log.target_type,
+      details: log.details,
+      ip_address: log.ip_address,
+      created_at: log.created_at,
+      admin: log.admin ? {
+        id: log.admin.id,
+        name: formatUserName(log.admin),
+        email: log.admin.email
+      } : null
+    })),
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    }
+  }
+}
+
 module.exports = {
   prisma,
   findUserByTelegramId,
@@ -1124,5 +1402,15 @@ module.exports = {
   markTrainerAttendance,
   assertTrainerAccess,
   listTrainers,
-  getTrainerPublicProfile
+  getTrainerPublicProfile,
+  // Admin functions
+  findUserByEmail,
+  createAdmin,
+  getAllUsers,
+  updateUserRole,
+  deleteUser,
+  getPlatformStats,
+  getPendingTrainerApprovals,
+  logAdminAction,
+  getAuditLogs
 }
