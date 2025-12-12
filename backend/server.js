@@ -2,6 +2,7 @@ const express = require('express')
 const cors = require('cors')
 const jwt = require('jsonwebtoken')
 const bcrypt = require('bcrypt')
+const rateLimit = require('express-rate-limit')
 const { validate: validateInitData, parse: parseInitData } = require('@telegram-apps/init-data-node')
 require('dotenv').config()
 const { authMiddleware } = require('./src/middleware/auth')
@@ -64,6 +65,40 @@ app.use(cors({ origin: true }))
 app.use(express.json({ limit: '1mb' }))
 app.use(express.urlencoded({extended: true}))
 
+// ---- rate limiters
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 600,
+  standardHeaders: true,
+  legacyHeaders: false
+})
+
+const adminLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'too_many_attempts' }
+})
+
+const telegramAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'too_many_requests' }
+})
+
+const trainerApplyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'too_many_requests' }
+})
+
+app.use('/api', apiLimiter)
+
 function trainerOnly(req, res, next) {
   if (req.userRole !== 'trainer') {
     // Enhanced error logging for debugging 403 issues
@@ -121,8 +156,18 @@ function extractInitData(req) {
   }
 }
 
+function isValidUrlMaybe(val) {
+  if (!val) return true
+  try {
+    const u = new URL(val)
+    return u.protocol === 'http:' || u.protocol === 'https:'
+  } catch (e) {
+    return false
+  }
+}
+
 // auth init (telegram initData)
-app.post('/api/auth/telegram-init', async (req, res) => {
+app.post('/api/auth/telegram-init', telegramAuthLimiter, async (req, res) => {
   const { parsed, error } = extractInitData(req)
   if (error || !parsed) {
     const status = error === 'missing_init_data' ? 400 : 401
@@ -173,7 +218,7 @@ app.post('/api/auth/telegram-init', async (req, res) => {
 })
 
 // Admin email/password login
-app.post('/api/auth/admin/login', async (req, res) => {
+app.post('/api/auth/admin/login', adminLoginLimiter, async (req, res) => {
   const { email, password } = req.body || {}
   
   if (!email || !password) {
@@ -317,13 +362,60 @@ app.get('/api/me/trainer-profile', authMiddleware, async (req, res) => {
   }
 })
 
-app.post('/api/me/trainer-profile', authMiddleware, async (req, res) => {
+app.post('/api/me/trainer-profile', authMiddleware, trainerApplyLimiter, async (req, res) => {
   const body = req.body || {}
-  if (!body.headline && !body.bio) {
-    return res.status(400).json({ error: 'headline_or_bio_required' })
+
+  if (!body.bio || !body.bio.trim()) {
+    return res.status(400).json({ error: 'bio_required' })
   }
+
+  const bio = body.bio.trim()
+  if (bio.length > 2000) {
+    return res.status(400).json({ error: 'bio_too_long' })
+  }
+
+  const fullName = (body.full_name || '').trim()
+  if (!fullName) {
+    return res.status(400).json({ error: 'full_name_required' })
+  }
+
+  const location = (body.location || '').trim()
+  if (!location) {
+    return res.status(400).json({ error: 'location_required' })
+  }
+
+  if (body.hero_url && !isValidUrlMaybe(body.hero_url)) {
+    return res.status(400).json({ error: 'invalid_cv_link' })
+  }
+
   try {
-    const profile = await upsertTrainerProfile(req.userId, body)
+    // Derive defaults from user for contact
+    const user = await findUserById(req.userId)
+    const contactFromUsername = user?.username ? `https://t.me/${user.username.replace('@', '')}` : null
+
+    // Allow updating full name if provided
+    if (fullName) {
+      const parts = fullName.split(' ').filter(Boolean)
+      const first_name = parts[0] || null
+      const last_name = parts.length > 1 ? parts.slice(1).join(' ') : null
+      await updateUserProfile(req.userId, { first_name, last_name })
+    }
+
+    const payload = {
+      headline: fullName || body.headline,
+      bio,
+      years_experience: body.years_experience,
+      location,
+      price_from: null,
+      languages: [],
+      specialties: [],
+      certifications: [],
+      hero_url: body.hero_url || null, // cv link
+      contact_url: contactFromUsername,
+      telegram_username: user?.username || null
+    }
+
+    const profile = await upsertTrainerProfile(req.userId, payload)
     res.json({ ok: true, profile })
   } catch (err) {
     console.error('trainer profile POST error', err)
@@ -779,15 +871,27 @@ app.post('/api/admin/trainers/:userId/approve', authMiddleware, adminOnly, async
       
       res.json({ success: true, message: 'trainer_approved' })
     } else {
-      // Log rejection
-      const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
+      // On reject: remove trainer profile so it disappears from pending
+      await upsertTrainerProfile(req.params.userId, {
+        headline: null,
+        bio: null,
+        years_experience: null,
+        location: null,
+        price_from: null,
+        languages: [],
+        specialties: [],
+        certifications: [],
+        hero_url: null,
+        contact_url: null,
+        telegram_username: null
+      })
       await logAdminAction(
         req.userId,
         'trainer.reject',
         user.id,
         'user',
         null,
-        ip
+        req.headers['x-forwarded-for'] || req.connection.remoteAddress
       )
       
       res.json({ success: true, message: 'trainer_rejected' })

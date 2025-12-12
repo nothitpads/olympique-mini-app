@@ -16,17 +16,12 @@ export default function ApplyTrainer() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [form, setForm] = useState({
-    headline: '',
+    full_name: '',
     bio: '',
     years_experience: '',
     location: '',
-    price_from: '',
-    languages: '',
-    specialties: '',
-    certifications: '',
-    contact_url: '',
-    telegram_username: '',
-    hero_url: ''
+    hero_url: '',
+    cv_link: ''
   })
 
   useEffect(() => {
@@ -38,17 +33,12 @@ export default function ApplyTrainer() {
         if (mounted && res.data) {
           const p = res.data
           setForm({
-            headline: p.headline || '',
+            full_name: p.name || '',
             bio: p.bio || '',
             years_experience: p.years_experience ?? '',
             location: p.location || '',
-            price_from: p.price_from ?? '',
-            languages: (p.languages || []).join(', '),
-            specialties: (p.specialties || []).join(', '),
-            certifications: (p.certifications || []).join(', '),
-            contact_url: p.contact_url || '',
-            telegram_username: p.telegram_username || '',
-            hero_url: p.hero_url || ''
+            hero_url: p.hero_url || '',
+            cv_link: p.hero_url || ''
           })
         }
       } catch (err) {
@@ -74,17 +64,12 @@ export default function ApplyTrainer() {
     setLoading(true)
     try {
       const payload = {
-        headline: form.headline?.trim(),
+        full_name: form.full_name?.trim(),
+        headline: form.full_name?.trim() || 'Trainer',
         bio: form.bio?.trim(),
         years_experience: form.years_experience === '' ? null : Number(form.years_experience),
         location: form.location?.trim(),
-        price_from: form.price_from === '' ? null : Number(form.price_from),
-        languages: splitList(form.languages),
-        specialties: splitList(form.specialties),
-        certifications: splitList(form.certifications),
-        contact_url: form.contact_url?.trim(),
-        telegram_username: form.telegram_username?.replace('@', '').trim(),
-        hero_url: form.hero_url?.trim()
+        hero_url: form.cv_link?.trim() || form.hero_url?.trim() || null
       }
 
       const res = await api.post('/me/trainer-profile', payload)
@@ -118,109 +103,53 @@ export default function ApplyTrainer() {
         )}
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
-            <label className="form-label">Заголовок*</label>
+            <label className="form-label">Полное имя*</label>
             <input
               className="form-input"
-              placeholder="Онлайн тренер, гибкие программы"
-              value={form.headline}
-              onChange={update('headline')}
-              required={!form.bio}
+              placeholder="Имя и фамилия"
+              value={form.full_name}
+              onChange={update('full_name')}
+              required
             />
           </div>
           <div>
-            <label className="form-label">О себе*</label>
+            <label className="form-label">Город*</label>
+            <input
+              className="form-input"
+              placeholder="Город"
+              value={form.location}
+              onChange={update('location')}
+              required
+            />
+          </div>
+          <div>
+            <label className="form-label">CV / О себе*</label>
             <textarea
               className="form-textarea"
               rows={4}
-              placeholder="Опишите опыт, подход, специализации"
+              placeholder="Опишите опыт, подход, проекты"
               value={form.bio}
               onChange={update('bio')}
-              required={!form.headline}
+              required
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="form-label">Опыт (лет)</label>
-              <input
-                className="form-input"
-                type="number"
-                min="0"
-                value={form.years_experience}
-                onChange={update('years_experience')}
-              />
-            </div>
-            <div>
-              <label className="form-label">Стоимость от</label>
-              <input
-                className="form-input"
-                type="number"
-                min="0"
-                value={form.price_from}
-                onChange={update('price_from')}
-              />
-            </div>
-          </div>
           <div>
-            <label className="form-label">Локация</label>
+            <label className="form-label">Опыт (лет)</label>
             <input
               className="form-input"
-              placeholder="Москва / Онлайн"
-              value={form.location}
-              onChange={update('location')}
+              type="number"
+              min="0"
+              value={form.years_experience}
+              onChange={update('years_experience')}
             />
           </div>
           <div>
-            <label className="form-label">Специализации (через запятую)</label>
-            <input
-              className="form-input"
-              placeholder="Снижение веса, Набор массы"
-              value={form.specialties}
-              onChange={update('specialties')}
-            />
-          </div>
-          <div>
-            <label className="form-label">Языки (через запятую)</label>
-            <input
-              className="form-input"
-              placeholder="Русский, English"
-              value={form.languages}
-              onChange={update('languages')}
-            />
-          </div>
-          <div>
-            <label className="form-label">Сертификаты (через запятую)</label>
-            <input
-              className="form-input"
-              placeholder="ACE, NASM"
-              value={form.certifications}
-              onChange={update('certifications')}
-            />
-          </div>
-          <div>
-            <label className="form-label">Контакт (ссылка)</label>
-            <input
-              className="form-input"
-              placeholder="https://t.me/yourname"
-              value={form.contact_url}
-              onChange={update('contact_url')}
-            />
-          </div>
-          <div>
-            <label className="form-label">Telegram username</label>
-            <input
-              className="form-input"
-              placeholder="@username"
-              value={form.telegram_username}
-              onChange={update('telegram_username')}
-            />
-          </div>
-          <div>
-            <label className="form-label">Картинка (hero)</label>
+            <label className="form-label">Файл CV (ссылка)</label>
             <input
               className="form-input"
               placeholder="https://..."
-              value={form.hero_url}
-              onChange={update('hero_url')}
+              value={form.cv_link}
+              onChange={update('cv_link')}
             />
           </div>
           <div className="space-y-2">

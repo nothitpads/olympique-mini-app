@@ -72,6 +72,10 @@
   flex: 1;
 }
 
+.trainer-bio-block {
+  margin-bottom: 1rem;
+}
+
 .trainer-headline {
   font-weight: 600;
   color: #2d3748;
@@ -95,11 +99,17 @@
   display: flex;
   gap: 0.5rem;
   font-size: 0.875rem;
+  margin-bottom: 0.35rem;
 }
 
 .info-item .label {
   font-weight: 600;
   color: #4a5568;
+}
+
+.link {
+  color: #2563eb;
+  text-decoration: underline;
 }
 
 .tags {

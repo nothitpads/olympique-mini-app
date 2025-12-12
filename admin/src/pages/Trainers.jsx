@@ -28,6 +28,8 @@ export default function Trainers() {
 
     try {
       await api.approveTrainer(userId, true)
+      // optimistic remove
+      setPending((prev) => prev.filter((p) => p.id !== userId))
       loadPendingTrainers()
     } catch (err) {
       alert('Failed to approve trainer: ' + err.message)
@@ -39,6 +41,8 @@ export default function Trainers() {
 
     try {
       await api.approveTrainer(userId, false)
+      // optimistic remove
+      setPending((prev) => prev.filter((p) => p.id !== userId))
       loadPendingTrainers()
     } catch (err) {
       alert('Failed to reject trainer: ' + err.message)
@@ -76,14 +80,13 @@ export default function Trainers() {
 
               {trainer.profile && (
                 <div className="trainer-details">
-                  {trainer.profile.headline && (
-                    <p className="trainer-headline">{trainer.profile.headline}</p>
-                  )}
-                  
                   {trainer.profile.bio && (
-                    <p className="trainer-bio">{trainer.profile.bio}</p>
+                    <div className="trainer-bio-block">
+                      <div className="label">CV / Summary:</div>
+                      <p className="trainer-bio">{trainer.profile.bio}</p>
+                    </div>
                   )}
-                  
+
                   <div className="trainer-info">
                     {trainer.profile.years_experience && (
                       <div className="info-item">
@@ -91,31 +94,34 @@ export default function Trainers() {
                         <span>{trainer.profile.years_experience} years</span>
                       </div>
                     )}
-                    
+
                     {trainer.profile.location && (
                       <div className="info-item">
-                        <span className="label">Location:</span>
+                        <span className="label">City:</span>
                         <span>{trainer.profile.location}</span>
                       </div>
                     )}
                   </div>
+
+                  {trainer.profile.hero_url && (
+                    <div className="info-item">
+                      <span className="label">CV File:</span>
+                      <a
+                        href={trainer.profile.hero_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="link"
+                      >
+                        Open
+                      </a>
+                    </div>
+                  )}
 
                   {trainer.profile.specialties && trainer.profile.specialties.length > 0 && (
                     <div className="tags">
                       {trainer.profile.specialties.map((spec, idx) => (
                         <span key={idx} className="tag">{spec}</span>
                       ))}
-                    </div>
-                  )}
-
-                  {trainer.profile.certifications && trainer.profile.certifications.length > 0 && (
-                    <div className="certifications">
-                      <strong>Certifications:</strong>
-                      <ul>
-                        {trainer.profile.certifications.map((cert, idx) => (
-                          <li key={idx}>{cert}</li>
-                        ))}
-                      </ul>
                     </div>
                   )}
                 </div>
